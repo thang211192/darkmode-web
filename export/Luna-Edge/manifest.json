@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Luna — Dark mode cho mọi website",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Không gian web dịu mắt. Chỉnh độ tối, bật tắt từng website và quản lý danh sách ngoại lệ.",
   "permissions": ["storage", "tabs", "scripting"],
   "host_permissions": ["http://*/*", "https://*/*"],

@@ -1,8 +1,9 @@
 (function (root) {
   const defaults = {enabled: true, darkness: 40, contrast: 100, warmth: 0, palette: 'slate', sites: {}, blacklist: []};
   function host(value) {
+    if (/\s/.test(value)) throw Error('Nhập tên miền hợp lệ, ví dụ: youtube.com');
     const url = new URL(value.includes('://') ? value : `https://${value}`);
-    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || /[\s*]/.test(url.hostname)) throw Error('Nhập tên miền hợp lệ, ví dụ: youtube.com');
+    if (!['http:', 'https:'].includes(url.protocol) || !url.hostname || /[\s*%]/.test(url.hostname)) throw Error('Nhập tên miền hợp lệ, ví dụ: youtube.com');
     return url.hostname.toLowerCase().replace(/\.$/, '');
   }
   function blocked(domain, list) { return list.some(item => domain === item || domain.endsWith(`.${item}`)); }

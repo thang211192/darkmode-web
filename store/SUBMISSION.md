@@ -1,9 +1,9 @@
-# Hồ sơ Microsoft Edge Add-ons — Luna 1.0.1
+# Hồ sơ Microsoft Edge Add-ons — Luna 1.0.2
 
 Trạng thái: đã chuẩn bị tệp cục bộ, chưa upload hoặc gửi duyệt.
 
 ## Tệp upload
-- Package: `export/Luna-Edge-Store-1.0.1.zip` (manifest.json nằm ở gốc).
+- Package: `export/Luna-Edge-Store-1.0.2.zip` (manifest.json nằm ở gốc).
 - Logo: `store/logo-300.png` (300 × 300 PNG, nền trong suốt).
 - Ảnh popup hiện tại: `export/Luna-preview.png`. Đây là bản xem trước, KHÔNG upload vào trường screenshot vì chưa đúng kích thước của Store. Screenshot là tùy chọn; có thể bỏ trống khi gửi lần đầu.
 
@@ -44,6 +44,7 @@ No. All executable code, including the MIT-licensed Dark Reader library and page
 Answer the exact questions shown in Partner Center consistently with PRIVACY.md. Luna processes page content and URLs locally and stores user-selected domains and preferences locally. It does not transmit browsing history or page content to a developer-operated service. Resource servers may receive requests for CSS/images, including the user's IP address and resource URL. Do not claim that Luna never accesses website data or never makes network requests.
 
 ## Description — Tiếng Việt
+Giao diện hỗ trợ Tiếng Việt và English; chuyển ngôn ngữ trực tiếp trong popup và tự động ghi nhớ lựa chọn trên thiết bị.
 Luna giúp bạn chuyển các website sang giao diện tối và tùy chỉnh màu sắc theo sở thích ngay khi đang duyệt web.
 
 Bạn có thể bật hoặc tắt chế độ tối cho toàn bộ trình duyệt hoặc riêng từng website. Danh sách ngoại lệ giúp giữ nguyên giao diện gốc trên những trang bạn chọn, bao gồm cả tên miền phụ. Ba bảng màu Dịu mắt, Đêm sâu và Ấm áp đi kèm các thanh chỉnh độ tối, tương phản và sắc ấm. Thay đổi được áp dụng trực tiếp mà không cần tải lại website.
@@ -53,6 +54,7 @@ Luna lưu tùy chọn trên thiết bị, hỗ trợ cấu hình màu riêng cho
 Lưu ý: các trang nội bộ Edge, cửa hàng tiện ích và trình xem PDF tích hợp bị trình duyệt giới hạn. Một số nội dung canvas hoặc thiết kế đặc biệt có thể không chuyển màu hoàn hảo; bạn có thể thêm website đó vào danh sách ngoại lệ. Hãy tắt các tiện ích chuyển màu khác khi dùng Luna để tránh xung đột.
 
 ## Description — English
+The interface supports English and Vietnamese. Switch languages directly in the popup; your selection is remembered locally on your device.
 Luna brings a customizable dark theme to websites while you browse. Turn dark mode on or off globally or for an individual website, and keep selected domains in their original appearance using the exclusion list.
 
 Choose from three palettes and adjust darkness, contrast and warmth. Changes apply live without reloading the page. Save separate color preferences for individual websites or use one shared configuration.

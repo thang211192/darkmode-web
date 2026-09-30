@@ -10,6 +10,7 @@
 Giữ thư mục cài đặt ở vị trí cố định. Không cần npm, tài khoản hoặc trả phí để dùng bản xuất.
 
 ## Sử dụng
+- Chọn **Tiếng Việt / English** ở đầu popup để đổi ngôn ngữ ngay. Lựa chọn được lưu trên thiết bị, độc lập với màu sắc và blacklist.
 - Công tắc lớn: bật/tắt toàn bộ.
 - Công tắc cạnh tên miền: bật/tắt website hiện tại; website tắt được đưa vào blacklist.
 - Blacklist: nhập tên miền hoặc URL và nhấn +; Xóa để áp dụng chế độ tối trở lại. Mỗi mục áp dụng cả các tên miền phụ. Bật một website đang bị chặn bởi tên miền cha sẽ gỡ mục tên miền cha (popup thông báo tên miền vừa gỡ).

@@ -1,7 +1,24 @@
 const $ = id => document.getElementById(id);
+const t = LunaI18n.t;
+const languagePicker = document.createElement('select');
+languagePicker.id = 'language';
+languagePicker.setAttribute('aria-label', 'Ngôn ngữ');
+for (const [value, label] of [['vi', 'Tiếng Việt'], ['en', 'English']]) {
+  const option = document.createElement('option'); option.value = value; option.textContent = label; languagePicker.append(option);
+}
+document.querySelector('header').insertBefore(languagePicker, document.querySelector('.version'));
+let languageWrites = Promise.resolve();
+languagePicker.onchange = () => {
+  const language = languagePicker.value;
+  LunaI18n.set(language);
+  $('form-error').textContent = '';
+  $('toast').classList.remove('show');
+  render();
+  languageWrites = languageWrites.catch(() => {}).then(() => chrome.storage.local.set({language})).catch(() => toast('Không thể lưu. Hãy thử mở lại Luna.'));
+};
 let config = Luna.settings(), domain = '', tab, scope = 'global', toastTimer;
 let writes = Promise.resolve();
-function toast(message) { $('toast').textContent = message; $('toast').classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2300); }
+function toast(message) { $('toast').textContent = t(message); $('toast').classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2300); }
 function save() { const snapshot = structuredClone(config); writes = writes.catch(() => {}).then(() => chrome.storage.local.set({config: snapshot})).catch(() => toast('Không thể lưu. Hãy thử mở lại Luna.')); render(); }
 function editing() { return scope === 'site' ? {...config, ...config.sites[domain]} : config; }
 function change(values) { if (scope === 'site') config.sites[domain] = {...config.sites[domain], ...values}; else Object.assign(config, values); save(); }
@@ -28,10 +45,11 @@ function render() {
   for (const item of config.blacklist) {
     const row = document.createElement('div'); row.className = 'blacklist-item';
     const label = document.createElement('span'); label.textContent = item;
-    const remove = document.createElement('button'); remove.textContent = 'Xóa'; remove.setAttribute('aria-label', `Xóa ${item} khỏi blacklist`);
+    const remove = document.createElement('button'); remove.textContent = t('Xóa'); remove.setAttribute('aria-label', LunaI18n.removeLabel(item));
     remove.onclick = () => {config.blacklist = config.blacklist.filter(x => x !== item); save();};
     row.append(label, remove); $('blacklist-items').append(row);
   }
+  LunaI18n.apply();
 }
 document.querySelectorAll('.tab').forEach(button => button.onclick = () => {
   document.querySelectorAll('.tab').forEach(el => {el.classList.toggle('active', el === button); el.setAttribute('aria-selected', el === button);});
@@ -41,7 +59,7 @@ $('global-toggle').onclick = () => {config.enabled = !config.enabled; save();};
 $('site-toggle').onclick = () => {
   if (!domain) return;
   const parents = config.blacklist.filter(x => domain === x || domain.endsWith('.' + x));
-  if (parents.length) {config.blacklist = config.blacklist.filter(x => !parents.includes(x)); toast(`Đã bỏ ngoại lệ: ${parents.join(', ')}`);}
+  if (parents.length) {config.blacklist = config.blacklist.filter(x => !parents.includes(x)); toast(LunaI18n.removed(parents.join(', ')));}
   else config.blacklist.push(domain);
   save();
 };
@@ -58,11 +76,12 @@ $('blacklist-form').onsubmit = event => {
     const item = Luna.host($('domain').value.trim());
     if (config.blacklist.includes(item)) throw Error('Website này đã có trong blacklist.');
     config.blacklist.push(item); config.blacklist.sort(); $('domain').value = ''; save(); toast('Đã thêm website vào blacklist.');
-  } catch (error) {$('form-error').textContent = error.message;}
+  } catch (error) {$('form-error').textContent = t(error instanceof TypeError ? 'Nhập tên miền hợp lệ, ví dụ: youtube.com' : error.message);}
 };
 async function init() {
   document.querySelector('.version').textContent = 'V ' + chrome.runtime.getManifest().version;
-  const stored = await chrome.storage.local.get('config'); config = Luna.settings(stored.config);
+  const stored = await chrome.storage.local.get(['config', 'language']); config = Luna.settings(stored.config);
+  LunaI18n.set(stored.language); LunaI18n.apply();
   [tab] = await chrome.tabs.query({active: true, currentWindow: true});
   try {domain = Luna.host(tab.url); if (/^(chromewebstore.google.com|microsoftedge.microsoft.com)$/.test(domain)) domain = '';} catch {}
   if (domain) {
@@ -75,4 +94,4 @@ async function init() {
   } else {$('notice').hidden = false; $('notice').textContent = 'Edge không cho phép extension đổi màu trang nội bộ, cửa hàng tiện ích hoặc trình xem PDF tích hợp.';}
   render();
 }
-init().catch(() => {$('notice').hidden = false; $('notice').textContent = 'Không thể đọc cài đặt. Hãy đóng và mở lại Luna.';});
+init().catch(() => {$('notice').hidden = false; $('notice').textContent = t('Không thể đọc cài đặt. Hãy đóng và mở lại Luna.');});
