@@ -1,7 +1,12 @@
 (() => {
+  if (globalThis.__lunaConnected) return;
+  document.dispatchEvent(new Event('__luna_dispose'));
+  globalThis.__lunaConnected = true;
   let domain = location.hostname;
   let initialized = false;
   let timer;
+  let latest;
+  let disposed = false;
   async function resourceFetch(url) {
     const absolute = new URL(url, location.href);
     if (absolute.protocol === 'data:' || absolute.protocol === 'blob:') return fetch(absolute.href);
@@ -19,24 +24,36 @@
       response.blob().then(blob => reader.readAsDataURL(blob), reject);
     });
   }};
-  async function apply() {
-    const {config} = await chrome.storage.local.get('config');
-    const state = Luna.effective(Luna.settings(config), domain);
-    if (state.enabled) DarkReader.enable(Luna.theme(state));
+  function apply() {
+    if (disposed) return;
+    const state = Luna.effective(Luna.settings(latest), domain);
+    // A non-null fixes object enables Dark Reader's palette refresh on subsequent
+    // color changes; without it cached CSS variables can retain the old colors.
+    if (state.enabled) DarkReader.enable({...Luna.theme(state), immediateModify: true}, {});
     else DarkReader.disable();
   }
-  chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && changes.config && initialized) {
-      clearTimeout(timer); timer = setTimeout(() => apply().catch(console.error), 60);
+  function onStorage(changes, area) {
+    if (area === 'local' && changes.config) {
+      latest = changes.config.newValue;
+      // Throttle, rather than debounce: update while the slider is still moving.
+      if (initialized && !timer) timer = setTimeout(() => {timer = null; apply();}, 16);
     }
-  });
-  chrome.runtime.onMessage.addListener((message, sender, reply) => {
+  }
+  chrome.storage.onChanged.addListener(onStorage);
+  function onMessage(message, sender, reply) {
     if (message.type === 'status') reply({enabled: DarkReader.isEnabled(), domain});
-  });
+  }
+  chrome.runtime.onMessage.addListener(onMessage);
+  document.addEventListener('__luna_dispose', () => {
+    disposed = true; clearTimeout(timer); DarkReader.disable();
+    try {chrome.storage.onChanged.removeListener(onStorage); chrome.runtime.onMessage.removeListener(onMessage);} catch {}
+  }, {once: true});
   (async () => {
     const context = await lunaSendMessage({type: 'context'});
     try { domain = Luna.host(context.url); } catch {}
+    const {config} = await chrome.storage.local.get('config');
+    if (latest === undefined) latest = config;
     initialized = true;
-    await apply();
+    apply();
   })().catch(console.error);
 })();

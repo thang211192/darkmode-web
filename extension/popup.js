@@ -61,13 +61,17 @@ $('blacklist-form').onsubmit = event => {
   } catch (error) {$('form-error').textContent = error.message;}
 };
 async function init() {
+  document.querySelector('.version').textContent = 'V ' + chrome.runtime.getManifest().version;
   const stored = await chrome.storage.local.get('config'); config = Luna.settings(stored.config);
   [tab] = await chrome.tabs.query({active: true, currentWindow: true});
   try {domain = Luna.host(tab.url); if (/^(chromewebstore.google.com|microsoftedge.microsoft.com)$/.test(domain)) domain = '';} catch {}
   if (domain) {
     if (config.sites[domain]) {scope = 'site'; $('scope').value = 'site';}
-    try {await chrome.tabs.sendMessage(tab.id, {type: 'status'}, {frameId: 0});}
-    catch {$('notice').hidden = false; $('notice').textContent = 'Tải lại trang một lần để Luna bắt đầu hoạt động trên tab đã mở trước khi cài.';}
+    try {
+      const result = await chrome.runtime.sendMessage({type: 'ensure-tab', tabId: tab.id});
+      if (!result || result.error) throw Error(result?.error);
+    }
+    catch {$('notice').hidden = false; $('notice').textContent = 'Luna chưa thể kết nối với trang này. Kiểm tra quyền truy cập website của tiện ích trong Edge.';}
   } else {$('notice').hidden = false; $('notice').textContent = 'Edge không cho phép extension đổi màu trang nội bộ, cửa hàng tiện ích hoặc trình xem PDF tích hợp.';}
   render();
 }

@@ -72,6 +72,14 @@ const assert = require('node:assert/strict');
     assert.equal(await popup.locator('#scope').inputValue(),'site');
     assert.equal(await popup.locator('[data-palette="warm"]').getAttribute('aria-pressed'),'true');
     console.log('PASS: per-site toggle and per-site color persistence');
+    const documentToken = await page.evaluate(() => {window.lunaTestToken = Math.random(); return window.lunaTestToken;});
+    for (const [key, value] of [['darkness', 15], ['darkness', 85], ['contrast', 120], ['warmth', 50]]) {
+      const before = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+      await popup.locator('#' + key).evaluate((input, value) => {input.value = value; input.dispatchEvent(new Event('input', {bubbles:true}));}, value);
+      await page.waitForFunction(before => getComputedStyle(document.body).backgroundColor !== before, before);
+      assert.equal(await page.evaluate(() => window.lunaTestToken), documentToken);
+    }
+    console.log('PASS: all sliders update page colors live without navigation');
     await popup.locator('#reset').click();
     await popup.locator('#scope').selectOption('global');
     await popup.locator('#reset').click();
@@ -81,5 +89,37 @@ const assert = require('node:assert/strict');
     fs.mkdirSync('test-results',{recursive:true});
     await popup.screenshot({path:'test-results/luna-popup.png',fullPage:true});
     console.log('PASS: popup screenshot saved');
+    // Disable declarative injection to reproduce a tab opened before installation.
+    const manualExtension = path.resolve('test-results/manual-extension');
+    fs.cpSync(extension, manualExtension, {recursive:true});
+    const manifest = JSON.parse(fs.readFileSync(path.join(manualExtension,'manifest.json')));
+    manifest.content_scripts = [];
+    fs.writeFileSync(path.join(manualExtension,'manifest.json'), JSON.stringify(manifest));
+    const cold = await chromium.launchPersistentContext('', {channel: process.env.LUNA_BROWSER || 'chromium', headless:true, args:[`--disable-extensions-except=${manualExtension}`, `--load-extension=${manualExtension}`]});
+    try {
+      const coldWorker = cold.serviceWorkers()[0] || await cold.waitForEvent('serviceworker');
+      await coldWorker.evaluate(async () => { await chrome.storage.local.get('config'); });
+      const existing = await cold.newPage(); await existing.goto('http://127.0.0.1:8766');
+      const token = await existing.evaluate(() => {window.token = Math.random();return window.token;});
+      assert.equal(await existing.getAttribute('html', 'data-darkreader-mode'), null);
+      const existingTab = await coldWorker.evaluate(async () => (await chrome.tabs.query({url:'http://127.0.0.1/*'}))[0].id);
+      const controls = await cold.newPage();
+      await controls.addInitScript(tabId => {chrome.tabs.query = async () => [{id:tabId,url:'http://127.0.0.1:8766'}];}, existingTab);
+      await controls.goto(`chrome-extension://${new URL(coldWorker.url()).host}/popup.html`);
+      await existing.waitForFunction(() => document.documentElement.hasAttribute('data-darkreader-mode'));
+      await existing.waitForFunction(() => getComputedStyle(document.body).backgroundColor !== 'rgb(255, 255, 255)');
+      await controls.locator('#global-toggle').click();
+      await existing.waitForFunction(() => !document.documentElement.hasAttribute('data-darkreader-mode'));
+      const child = existing.frames().find(frame => frame.url().includes('/frame'));
+      await child.waitForFunction(() => !document.documentElement.hasAttribute('data-darkreader-mode'));
+      await controls.locator('#global-toggle').click();
+      await existing.waitForFunction(() => document.documentElement.hasAttribute('data-darkreader-mode'));
+      await child.waitForFunction(() => document.documentElement.hasAttribute('data-darkreader-mode'));
+      await controls.reload();
+      await controls.locator('#hostname').filter({hasText:'127.0.0.1'}).waitFor();
+      assert.equal(await existing.evaluate(() => window.token), token);
+      assert.equal(await existing.locator('.darkreader--user-agent').count(),1);
+      console.log('PASS: attaches to an existing tab and frames without reload; repeated connection stays idempotent');
+    } finally {await cold.close();}
   } finally {await context.close();server.close();}
 })().catch(error => {console.error(error);process.exitCode=1;});

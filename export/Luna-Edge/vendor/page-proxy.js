@@ -1,5 +1,7 @@
 // Adapted from Dark Reader (MIT); see LICENSE-DarkReader.txt.
 (() => {
+if (globalThis.__lunaProxyInstalled) return;
+globalThis.__lunaProxyInstalled = true;
     function injectProxy(
         enableStyleSheetsProxy,
         enableCustomElementRegistryProxy

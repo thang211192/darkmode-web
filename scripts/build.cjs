@@ -14,7 +14,7 @@ const inlineBlock = /\{\s*const proxyScript = createOrUpdateScript\("darkreader-
 if (!inlineBlock.test(engine)) throw Error('Dark Reader injection structure changed');
 engine = engine.replace(inlineBlock, 'document.dispatchEvent(new CustomEvent("__luna_startProxy"));');
 fs.writeFileSync(path.join(root, 'extension', 'vendor', 'darkreader.js'), engine);
-fs.writeFileSync(path.join(root, 'extension', 'vendor', 'page-proxy.js'), '// Adapted from Dark Reader (MIT); see LICENSE-DarkReader.txt.\n(() => {\n' + proxy + '\ndocument.addEventListener("__luna_startProxy", () => injectProxy(true, true));\n})();\n');
+fs.writeFileSync(path.join(root, 'extension', 'vendor', 'page-proxy.js'), '// Adapted from Dark Reader (MIT); see LICENSE-DarkReader.txt.\n(() => {\nif (globalThis.__lunaProxyInstalled) return;\nglobalThis.__lunaProxyInstalled = true;\n' + proxy + '\ndocument.addEventListener("__luna_startProxy", () => injectProxy(true, true));\n})();\n');
 fs.copyFileSync(path.join(root, 'node_modules', 'darkreader', 'LICENSE'), path.join(root, 'extension', 'vendor', 'LICENSE-DarkReader.txt'));
 fs.cpSync(path.join(root, 'extension'), dest, {recursive: true});
 fs.copyFileSync(path.join(root, 'README.md'), path.join(dest, 'HUONG-DAN.md'));

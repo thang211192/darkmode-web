@@ -1,10 +1,37 @@
 importScripts('shared.js');
+const connecting = new Map();
+function ensureTab(tabId) {
+  if (connecting.has(tabId)) return connecting.get(tabId);
+  const task = (async () => {
+    const frames = await chrome.scripting.executeScript({target: {tabId, allFrames: true}, func: () => Boolean(globalThis.__lunaConnected)});
+    for (const frame of frames.filter(frame => !frame.result)) {
+      try {
+        const target = {tabId, frameIds: [frame.frameId]};
+        await chrome.scripting.executeScript({target, world: 'MAIN', files: ['vendor/page-proxy.js']});
+        await chrome.scripting.executeScript({target, files: ['bridge.js', 'vendor/darkreader.js', 'shared.js', 'content.js']});
+      } catch { /* A frame may navigate or be removed during attachment. */ }
+    }
+    return await chrome.tabs.sendMessage(tabId, {type: 'status'}, {frameId: 0});
+  })().finally(() => connecting.delete(tabId));
+  connecting.set(tabId, task);
+  return task;
+}
+async function connectOpenTabs() {
+  const tabs = await chrome.tabs.query({url: ['http://*/*', 'https://*/*']});
+  await Promise.allSettled(tabs.map(tab => ensureTab(tab.id)));
+}
 chrome.runtime.onInstalled.addListener(async () => {
   const {config} = await chrome.storage.local.get('config');
   if (!config) await chrome.storage.local.set({config: Luna.settings()});
+  await connectOpenTabs();
 });
+chrome.runtime.onStartup.addListener(connectOpenTabs);
 chrome.runtime.onMessage.addListener((message, sender, reply) => {
   if (sender.id !== chrome.runtime.id) return;
+  if (message.type === 'ensure-tab' && sender.url?.startsWith(chrome.runtime.getURL(''))) {
+    ensureTab(message.tabId).then(reply, error => reply({error: error.message}));
+    return true;
+  }
   if (message.type === 'context') {
     reply({url: sender.tab?.url || sender.url});
     return;
