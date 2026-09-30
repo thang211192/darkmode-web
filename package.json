@@ -1,0 +1,21 @@
+{
+  "name": "darkmode-web",
+  "version": "1.0.0",
+  "description": "Luna dark mode extension for Microsoft Edge",
+  "main": "index.js",
+  "scripts": {
+    "build": "node scripts/build.cjs",
+    "test": "node --test tests/settings.test.cjs",
+    "test:browser": "node tests/browser.cjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "darkreader": "4.9.133"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

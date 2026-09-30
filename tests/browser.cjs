@@ -1,0 +1,85 @@
+const {chromium} = require('playwright');
+const path = require('node:path');
+const fs = require('node:fs');
+const http = require('node:http');
+const assert = require('node:assert/strict');
+(async () => {
+  const server = http.createServer((req, res) => {
+    if (req.url === '/frame') {res.setHeader('Content-Type', 'text/html'); res.end('<!doctype html><html><body style="background:white;color:black">Embedded content</body></html>');return;}
+    if (req.url === '/style.css') {res.setHeader('Content-Type', 'text/css'); res.end('body{background:#fff;color:#111}.card{background:#fafafa;border:1px solid #ccc;padding:24px}');return;}
+    res.setHeader('Content-Type', 'text/html');
+    res.end('<!doctype html><html><head><link rel="stylesheet" href="http://localhost:8766/style.css"></head><body><h1>Trang tin thử nghiệm</h1><div class="card">Nội dung dễ đọc <a href="#">Liên kết</a></div><img width="100" height="80" src="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%2280%22%3E%3Crect width=%22100%22 height=%2280%22 fill=%22red%22/%3E%3C/svg%3E"><iframe src="http://localhost:8766/frame" id="frame"></iframe></body></html>');
+  });
+  await new Promise(resolve => server.listen(8766, resolve));
+  const extension = path.resolve('export/Luna-Edge');
+  const context = await chromium.launchPersistentContext('', {channel: process.env.LUNA_BROWSER || 'chromium', headless: true, args: [`--disable-extensions-except=${extension}`, `--load-extension=${extension}`]});
+  try {
+    let worker = context.serviceWorkers()[0] || await context.waitForEvent('serviceworker');
+    const id = new URL(worker.url()).host;
+    const page = await context.newPage();
+    page.on('console', message => { if (message.type() === 'error') console.log('BROWSER:', message.text()); });
+    page.on('pageerror', error => console.log('PAGE ERROR:', error.message));
+    await page.goto('http://127.0.0.1:8766');
+    await page.waitForFunction(() => document.documentElement.getAttribute('data-darkreader-mode') === 'dynamic');
+    await page.waitForFunction(() => getComputedStyle(document.body).backgroundColor !== 'rgb(255, 255, 255)');
+    console.log('PASS: content script loads and transforms cross-origin stylesheet');
+    const frame = page.frames().find(frame => frame.url().includes('/frame'));
+    await frame.waitForFunction(() => document.documentElement.hasAttribute('data-darkreader-mode'));
+    assert.equal(await page.locator('img').evaluate(el => getComputedStyle(el).filter), 'none');
+    await page.evaluate(() => {const style = document.createElement('style'); document.head.append(style); style.sheet.insertRule('.dynamic {background: rgb(255, 240, 240); color:black}'); const node = document.createElement('div'); node.className='dynamic'; node.textContent='New content';document.body.append(node);});
+    await page.waitForFunction(() => {const color = getComputedStyle(document.querySelector('.dynamic')).backgroundColor;return color !== 'rgb(255, 240, 240)' && color !== 'rgba(0, 0, 0, 0)';});
+    console.log('PASS: iframe, preserved image colors and dynamically inserted CSS');
+    const original = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    const popup = await context.newPage();
+    popup.on('pageerror', error => console.log('POPUP ERROR:', error.message));
+    await popup.goto(`chrome-extension://${id}/popup.html`);
+    await popup.evaluate(async () => {await chrome.storage.local.set({config: {...Luna.settings(), enabled: false}});});
+    await page.waitForFunction(() => !document.documentElement.hasAttribute('data-darkreader-mode'));
+    await frame.waitForFunction(() => !document.documentElement.hasAttribute('data-darkreader-mode'));
+    assert.equal(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), 'rgb(255, 255, 255)');
+    console.log('PASS: global off restores original colors');
+    await popup.evaluate(async () => {await chrome.storage.local.set({config: {...Luna.settings(), blacklist: ['127.0.0.1']}});});
+    await page.reload();
+    await page.waitForTimeout(500);
+    assert.equal(await page.getAttribute('html','data-darkreader-mode'), null);
+    console.log('PASS: blacklist persists after navigation');
+    await popup.evaluate(async () => {await chrome.storage.local.set({config: {...Luna.settings(), darkness: 90}});});
+    await page.waitForFunction(() => document.documentElement.hasAttribute('data-darkreader-mode'));
+    await page.waitForFunction(before => getComputedStyle(document.body).backgroundColor !== before, original);
+    console.log('PASS: darkness changes computed page colors');
+    await popup.reload();
+    await popup.getByRole('button',{name:'Blacklist'}).click();
+    await popup.locator('#domain').fill('https://EXAMPLE.com/page');
+    await popup.locator('.add').click();
+    await popup.locator('.blacklist-item').getByText('example.com').waitFor();
+    await popup.reload();
+    await popup.getByRole('button',{name:'Blacklist'}).click();
+    await popup.locator('.blacklist-item').getByText('example.com').waitFor();
+    await popup.getByRole('button',{name:'Xóa example.com khỏi blacklist'}).click();
+    assert.equal(await popup.locator('.blacklist-item').count(),0);
+    console.log('PASS: popup adds, persists and removes blacklist entries');
+    // Open popup as a tab but override the active tab query to exercise the real site's UI.
+    await popup.addInitScript(tabId => {chrome.tabs.query = async () => [{id:tabId,url:'http://127.0.0.1:8766'}];}, await worker.evaluate(async () => (await chrome.tabs.query({url:'http://127.0.0.1/*'}))[0].id));
+    await popup.reload();
+    await popup.locator('#hostname').filter({hasText:'127.0.0.1'}).waitFor();
+    await popup.locator('#site-toggle').click();
+    await page.waitForFunction(() => !document.documentElement.hasAttribute('data-darkreader-mode'));
+    await popup.locator('#site-toggle').click();
+    await page.waitForFunction(() => document.documentElement.hasAttribute('data-darkreader-mode'));
+    await popup.locator('#scope').selectOption('site');
+    await popup.locator('[data-palette="warm"]').click();
+    await popup.reload();
+    assert.equal(await popup.locator('#scope').inputValue(),'site');
+    assert.equal(await popup.locator('[data-palette="warm"]').getAttribute('aria-pressed'),'true');
+    console.log('PASS: per-site toggle and per-site color persistence');
+    await popup.locator('#reset').click();
+    await popup.locator('#scope').selectOption('global');
+    await popup.locator('#reset').click();
+    await popup.waitForTimeout(2500);
+    await popup.locator('main').evaluate(el => el.scrollTop = 0);
+    await popup.setViewportSize({width:390,height:590});
+    fs.mkdirSync('test-results',{recursive:true});
+    await popup.screenshot({path:'test-results/luna-popup.png',fullPage:true});
+    console.log('PASS: popup screenshot saved');
+  } finally {await context.close();server.close();}
+})().catch(error => {console.error(error);process.exitCode=1;});

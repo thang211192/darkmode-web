@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="vi">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Luna · Không gian dịu mắt</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <header><div class="brand"><span class="logo">☾</span><div><h1>luna<span>●</span></h1><p>Không gian web dịu mắt</p></div></div><span class="version">V 1.0</span></header>
+  <main>
+    <section class="hero"><div class="hero-top"><span class="eyebrow">MỘT CHÚT TỐI. NHIỀU DỄ CHỊU.</span><span class="spark">✦</span></div><div class="power-row"><div><h2>Chế độ tối</h2><p id="global-label">Đang bảo vệ đôi mắt của bạn</p></div><button id="global-toggle" class="switch large" role="switch" aria-label="Bật tắt chế độ tối toàn bộ" aria-checked="true"><span></span></button></div><div class="hero-bottom"><span id="status-dot" class="dot"></span><span id="status">Sẵn sàng cho mọi website</span><span class="moon">☾</span></div></section>
+    <nav aria-label="Cài đặt"><button class="tab active" data-panel="appearance" aria-selected="true">Điều chỉnh</button><button class="tab" data-panel="exceptions" aria-selected="false">Blacklist <span id="count">0</span></button></nav>
+    <section id="appearance">
+      <div class="site-card"><div class="site-icon">◎</div><div class="site-info"><strong id="hostname">Đang đọc website…</strong><p id="site-status">Áp dụng cho website hiện tại</p></div><button id="site-toggle" class="switch" role="switch" aria-label="Bật tắt website hiện tại" aria-checked="true"><span></span></button></div>
+      <div id="notice" class="notice" hidden></div>
+      <div class="section-heading"><h3>Không gian của bạn</h3><select id="scope" aria-label="Phạm vi điều chỉnh"><option value="global">Tất cả website</option><option value="site">Riêng website này</option></select></div>
+      <div class="palettes"><button data-palette="slate" class="palette selected"><span class="swatch slate"><i></i><i></i><i></i></span>Dịu mắt</button><button data-palette="midnight" class="palette"><span class="swatch midnight"><i></i><i></i><i></i></span>Đêm sâu</button><button data-palette="warm" class="palette"><span class="swatch warm"><i></i><i></i><i></i></span>Ấm áp</button></div>
+      <div class="slider-row"><label for="darkness">◐ <span>Độ tối</span></label><output id="darkness-value">40%</output><input id="darkness" type="range" min="0" max="100" value="40"><div class="range-labels"><span>Sáng hơn</span><span>Tối hơn</span></div></div>
+      <div class="slider-row compact"><label for="contrast">◑ <span>Tương phản</span></label><output id="contrast-value">100%</output><input id="contrast" type="range" min="70" max="130" value="100"></div>
+      <div class="slider-row compact"><label for="warmth">☀ <span>Sắc ấm</span></label><output id="warmth-value">0%</output><input id="warmth" type="range" min="0" max="60" value="0"></div>
+      <button id="reset" class="reset">↺ &nbsp; Khôi phục màu mặc định</button>
+    </section>
+    <section id="exceptions" hidden><div class="section-heading"><h3>Giữ giao diện gốc</h3><span class="small-label">BLACKLIST</span></div><p class="description">Luna sẽ bỏ qua các tên miền này, bao gồm cả tên miền phụ.</p><form id="blacklist-form"><label for="domain">Website muốn loại trừ</label><div class="input-row"><input id="domain" placeholder="Ví dụ: youtube.com" autocomplete="off" required><button class="add" type="submit" aria-label="Thêm vào blacklist">+</button></div></form><p id="form-error" role="alert"></p><div id="blacklist-items"></div><div id="empty"><span>☷</span><h3>Chưa có ngoại lệ</h3><p>Những website bạn tắt sẽ xuất hiện ở đây.</p></div></section>
+  </main>
+  <footer><span><span class="tiny-dot"></span> Lưu trên thiết bị của bạn</span><span>LUNA / DARK MODE</span></footer>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="shared.js"></script><script src="popup.js"></script>
+</body></html>
